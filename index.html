@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<head>
+	<title>Esteganografía LSB</title>
+	<meta charset="UTF-8">
+</head>
+<body>
+	<h2>Esteganografía LSB</h2>
+
+	<p id="text">	
+		Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque condimentum dolor mauris, 
+		nec tempus est finibus vel. Suspendisse et sem ac velit vulputate 	tincidunt eget nec ante.
+		Aliquam ut molestie tellus, eget vehicula leo. Donec ultricies, felis sed ullamcorper facilisis,
+		mi lectus pharetra nisl, in condimentum sapien diam hendrerit enim. Nullam ullamcorper arcu purus,
+		eu mollis quam interdum nec. 
+	</p>
+
+	<hr/>
+	Imagen:
+	<input type="file" id="myImage" />
+	<canvas id="myCanvas" width="256" height="256" style='display:none;'></canvas>
+	<canvas id="mySecretCanvas" width="256" height="256" style='display:none;'></canvas>
+	<hr/>
+	Mensaje:  <br>
+	<textarea id="myMessage" rows="7" cols="100"> </textarea>
+	<hr/>
+	<button id="hideMessage">Insertar</button>
+	<button id="showMessage">Extraer</button>
+	<hr/>
+	Representación Binaria:	<br>
+	<textarea id="myBinMessage" rows="7" cols="100"> </textarea>
+
+	<script>
+		// VARIABLES GLOBALES
+		var myMsgBox = document.getElementById('myMessage');
+		var myImg = document.getElementById('myImage'); 
+		var myCtx = myCanvas.getContext('2d');
+		var mySecretCtx = mySecretCanvas.getContext('2d');
+		var myImgArray;
+		var myMsgArray;
+		var myTxtMessage = new String();
+		var unhidingTxt = false;
+		var hidingTxt = false;
+		index = 0;
+
+		// FUNCIONES GENERICAS
+		// UInt8; arreglo que almacena hasta 256 valores (caracteres)
+		function stringToUint(string) {
+    		ui =new Uint8Array(string.length);
+			for(var i=0,j=string.length;i<j;++i){
+  				ui[i]=string.charCodeAt(i);
+			}
+			return ui;
+		}
+		// ArrayBuffer; Representacion binaria del Texto
+		function str2ab(str) {
+  			var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  			var bufView = new Uint16Array(buf);
+  			for (var i=0, strLen=str.length; i<strLen; i++) {
+    			bufView[i] = str.charCodeAt(i);
+  			}
+  			return buf;
+		}
+
+		// Canvas; descarga de imagen
+		
+		// FUNCIONES DE LOS BOTONES
+		// TextBox de Mensaje
+		myMessage.addEventListener('input', function(e) {
+			myTxtMessage = this.value;
+			/*
+			if (this.value != "") { 
+				console.log("Text: " + this.value);
+				arrayBuffer=str2ab(this.value);
+				view = stringToUint(this.value);
+				console.log(arrayBuffer);
+			}
+			*/
+		});
+		
+		// Boton Insertar Mensaje
+		hideMessage.addEventListener('click', function(e) {
+			var file = myImg.files[0];
+			var fr = new FileReader();
+			
+
+			if(file != null) {
+				if (myTxtMessage != "") {
+					console.log("Longitud del MSg: " + myTxtMessage.length)
+					if (myTxtMessage.length < 256) {
+					fr.addEventListener( "load", loadEvent );
+					fr.addEventListener( "loadend", loadEndEvent );
+					
+					function loadEvent ( e ) {
+						console.info( 'Cargando... esperar un momento.' );     
+					}
+					
+					function loadEndEvent ( e ) {
+						console.info('Carga lista.');
+						var img = new Image();
+						img.src = e.target.result;
+						// Cargar imagen 
+						img.onload = function() {
+							// Dibujando imagen en Canvas (invisible)
+							myCtx.drawImage(img, 0, 0);
+							// Obteniendo los valores RGB
+							myImgArray = myCtx.getImageData(0, 0, myCanvas.height, myCanvas.width);
+							console.log(myImgArray);
+							// Leyendo y reemplazando bits para ocultar el Mensaje
+							myMsgArray = stringToUint(myTxtMessage);
+							console.log(myMsgArray);
+							readByte(myMsgArray);
+							// Dibujando imagen usando la matriz de bytes
+							mySecretCtx.putImageData( myImgArray, 0, 0 );
+							// Descargandi Imagen
+							
+							
+							
+
+							console.log('Done.');
+							
+						}	
+					}
+					fr.readAsDataURL(file);
+					} else {
+						alert("¡Texto demasiado largo!");
+						//console.log("Longitud del MSg: " + myTxtMessage.length)
+						myTxtMessage="";
+						myMsgBox.value="";
+					}
+				}
+				else {
+					alert("¡Insertar texto primero!");
+				}
+			} else {
+				alert("¡Insertar imagen primero!");
+			}
+		});
+
+
+		// FUNCIONES LSB
+		// ReadByte; Insertando la informacion del mensaje en la Matriz de Img
+		function readByte( secret ) {
+			for ( var i = 0, length = secret.length; i < length; i++ ) {
+    			if ( i == 0 ) {
+        			// En el prier bit se almacena la longitud del mensaje, el cual debe ser multiplo de 4
+        			// El codigo de un caracter contiene 8 bits, los cuales se dividen en grupos de 2
+        			// Cada grupo de 2 bits reemplaza el LSB(Least significant bit) del byte del pixel
+        			var secretLength = length * 4;
+        			console.info( 'Secret Length(' + length + 'x4) : ' + secretLength )
+        			// La informacion de la imagen se almacena en un arreglo (Uint8 myImgArray)
+        			// Solo puede almacenar un valor maximo de 256 caracteres (8bit or 1byte)
+        			if ( secretLength > 255 ) {
+            			// Calculando el numero de ciclos (en funcion de los caracteres)
+            			// Almacenar la longitud del mensaje
+            			var division = secretLength / 255;
+            			// Entero
+            			if ( division % 1 === 0 ) {
+                			for ( var k = 0; k < division; k++ ) {
+                    		myImgArray.data[ k ] = 255;
+                    		index++;
+                			}
+            			}
+		            	// Flotante
+        	   			 else {
+ 			           	    var firstPortion = division.toString().split(".")[ 0 ];
+                			var secondPortion = division.toString().split(".")[ 1 ];
+
+                			for ( var k = 0; k < firstPortion; k++ ) {
+                    			myImgArray.data[ k ] = 255;
+                    			index++;
+                			}
+
+                			var numberLeft = Math.round( ( division - firstPortion ) * 255 );
+                			console.info( 'numberLeft : ' + numberLeft )
+                			myImgArray.data[ k ] = numberLeft;
+                			index++;
+            			}
+
+        			} else {
+            			myImgArray.data[ 0 ] = secretLength;
+            			index++;
+        			}
+
+ 			       console.log( 'sss : ' + myImgArray.data[ 0 ] )
+
+    			}
+
+    			var asciiCode = secret[ i ];
+    			// Usando masking, para limpiar los bits, tomando solo los que se necesitan
+				// Tomando los primeros 2 bits, ej. : 0111 0011 => 0000 0011
+				var first2bit = ( asciiCode & 0x03 ); // 0x03 = 3
+				// Tomando solo los primeros  4 bits (2bits al final), e. : 0111 0011 => 0000 0000
+				var first4bitMiddle = ( asciiCode & 0x0C ) >> 2; // 0x0C = 12, cambiar a la derecha 2 bit o dividir entre 2^2, tomando primero los 2 bits al final
+				// Tomando solo los primeros 6 bits (2bits al final), ej. : 0111 0011 => 0011 0000
+				var first6bitMiddle = ( asciiCode & 0x30 ) >> 4; // 0x30 = 48, cambiar a la derecha 4 bit o dividir entre 2^4, tomando primero los 2 bits al final
+				// Tomando los primeros  8 bits (2bit al final), ej. : 0111 0011 => 0100 0000
+				var first8bitMiddle = ( asciiCode & 0xC0 ) >> 6; // 0xC0 = 192, cambiar a la derecha 6 bit o dividir entre 2^6, tomando primero los 2 bits al final
+				//console.log(i + ' : ' + first2bit);
+				//console.log(i + ' : ' + first4bitMiddle);
+				//console.log(i + ' : ' + first6bitMiddle);
+				//console.log(i + ' : ' + first8bitMiddle);
+				// Reemplazando el bit del mensaje secreto en el LSB
+				replaceByte( first2bit );
+				replaceByte( first4bitMiddle );
+				replaceByte( first6bitMiddle );
+				replaceByte( first8bitMiddle );
+			}
+		}
+
+		// Replacebyte, sustituye los bits en la matriz de la imagen
+		function replaceByte ( bits ) {
+			// Eliminar los 2 primeros bits y sustituyendolos por los del mensaje
+			myImgArray.data[ index ] = ( myImgArray.data[ index ] & 0xFC ) | bits;
+			index++;
+		}
+
+		
+		/*REFS:
+			-https://jsfiddle.net/norlihazmeyGhazali/quo42a2n/
+			-https://stackoverflow.com/questions/6965107/converting-between-strings-and-arraybuffers
+			https://jsperf.com/string-to-uint8array
+*/
+	</script>
+	
+</body>
