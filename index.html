@@ -17,8 +17,10 @@
 	<hr/>
 	Imagen:
 	<input type="file" id="myImage" />
+	<!-- CANVAS; SE OCULTAN AL FINAL-->
 	<canvas id="myCanvas" width="256" height="256" style='display:none;'></canvas>
 	<canvas id="mySecretCanvas" width="256" height="256" style='display:none;'></canvas>
+	
 	<hr/>
 	Mensaje:  <br>
 	<textarea id="myMessage" rows="7" cols="100"> </textarea>
@@ -51,17 +53,6 @@
 			}
 			return ui;
 		}
-		// ArrayBuffer; Representacion binaria del Texto
-		function str2ab(str) {
-  			var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
-  			var bufView = new Uint16Array(buf);
-  			for (var i=0, strLen=str.length; i<strLen; i++) {
-    			bufView[i] = str.charCodeAt(i);
-  			}
-  			return buf;
-		}
-
-		// Canvas; descarga de imagen
 		
 		// FUNCIONES DE LOS BOTONES
 		// TextBox de Mensaje
