@@ -1,48 +1,72 @@
 <!DOCTYPE html>
+<html>
 <head>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
 	<title>Esteganografía LSB</title>
 	<meta charset="UTF-8">
 </head>
-<body>
-	<h2>Esteganografía LSB</h2>
+<body background="img/fondo.png" >
 
-	<p id="text">	
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque condimentum dolor mauris, 
-		nec tempus est finibus vel. Suspendisse et sem ac velit vulputate 	tincidunt eget nec ante.
-		Aliquam ut molestie tellus, eget vehicula leo. Donec ultricies, felis sed ullamcorper facilisis,
-		mi lectus pharetra nisl, in condimentum sapien diam hendrerit enim. Nullam ullamcorper arcu purus,
-		eu mollis quam interdum nec. 
-	</p>
+	<div class='row' ></div>
+		<div class="col s4 "  ></div>
+		<h2 >Esteganografía LSB</h2>
+		<div class="card-panel">
+			<div class="blue-text text-darken-2" id='text'>
+				<p class="center-align" >Proyecto final</p>
+				<p>
+					Alejandro Résendiz Martinez
+					<br>					 
+					Marcos Zárraga Flores 
+				</p>
+				<p>
+					Este proyecto nos muestra el algoritmo de esteganografía LSB (Least significant bit),
+					donde se lee cada pixel de la imagen y se desglosa en bits, una vez teniendo esta información,
+					se altera el ultimo bit de la secuencia de colores para poder ocultar el mensaje en la imagen y
+					que el ojo humano no pueda diferenciar a simple vista las modificaciones realizadas a la imagen original.
+				</p>		 
+			</div>
+		</div>
+	</div>
 
 	<hr/>
 	Imagen:
 	<input type="file" id="myImage" />
-	<!-- CANVAS; SE OCULTAN AL FINAL-->
 	<canvas id="myCanvas" width="256" height="256" ></canvas>
+	<br>
 	<canvas id="mySecretCanvas" width="256" height="256" ></canvas>
-	
+	<a id="mySecretDownload" style='display:none;'>Secret</a>
 	<hr/>
-	Mensaje:  <br>
-	<textarea id="myMessage" rows="7" cols="100"> </textarea>
-	<hr/>
-	<button id="hideMessage">Insertar</button>
-	<button id="showMessage">Extraer</button>
-	<hr/>
+
+	<div class='row'>
+		<div class="col s6">
+			Mensaje:  <br>
+			<textarea id="myMessage" rows="7" cols="100"> </textarea>
+			<hr/>
+		</div>
+	</div>
+
+	<div class="row">
+		<button id="hideMessage">Insertar</button>
+		<button id="showMessage">Extraer</button>
+		<hr/>
+	</div>
+
+
 	Representación Binaria:	<br>
 	<textarea id="myBinMessage" rows="7" cols="100"> </textarea>
 
 	<script>
 		// VARIABLES GLOBALES
 		var myMsgBox = document.getElementById('myMessage');
+		var myBinMsgBox = document.getElementById('myBinMessage');
 		var myImg = document.getElementById('myImage'); 
+		var mySecretLink = document.getElementById('mySecretDownload');
 		var myCtx = myCanvas.getContext('2d');
 		var mySecretCtx = mySecretCanvas.getContext('2d');
 		var myImgArray;
 		var myMsgArray;
 		var myTxtMessage = new String();
-		var unhidingTxt = false;
-		var hidingTxt = false;
-		index = 0;
+		var index = 0;
 
 		// FUNCIONES GENERICAS
 		// UInt8; arreglo que almacena hasta 256 valores (caracteres)
@@ -53,19 +77,72 @@
 			}
 			return ui;
 		}
-		
+
+		// DecodeUtf8; obtener caracteres UTF-8 a partir de ArrayBuffer
+		function decodeUtf8(arrayBuffer) {
+			var result = "";
+			var i = 0;
+			var c = 0;
+			var c1 = 0;
+			var c2 = 0;
+
+			var data = new Uint8Array(arrayBuffer);
+
+			// If we have a BOM skip it
+			if (data.length >= 3 && data[0] === 0xef && data[1] === 0xBB && data[2] === 0xBF) {
+				i = 3;
+			}
+
+			while (i < data.length) {
+				c = data[i];
+
+				if (c < 128) {
+					result += String.fromCharCode(c);
+					i++;
+				} else if (c > 191 && c < 224) {
+					if (i + 1 >= data.length) {
+						throw "UTF-8 Decode failed. Two byte character was truncated.";
+					}
+					c2 = data[i + 1];
+					result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+					i += 2;
+				} else {
+					if (i + 2 >= data.length) {
+						throw "UTF-8 Decode failed. Multi byte character was truncated.";
+					}
+					c2 = data[i + 1];
+					c3 = data[i + 2];
+					result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+					i += 3;
+				}
+			}
+			return result;
+		}
+
+		// Canvas; descarga de imagen
+		function downloadCanvas(link, canvasId, filename) {
+			link.href = document.getElementById(canvasId).toDataURL();
+			link.download = filename;
+		}
+
+		document.getElementById('mySecretDownload').addEventListener('click', function() {
+    		downloadCanvas(this, 'mySecretCanvas', 'Secret.png');
+		}, false);
+
+		// Clear; reiniciar variables globales
+		myImg.addEventListener('click', function (e) {
+			myMsgBox.value = "";
+			myBinMsgBox.value = "";
+			index=0;
+			myTxtMessage = 0;
+			myCanvas.width = myCanvas.width;
+			mySecretCanvas.width = mySecretCanvas.width;
+		});
+
 		// FUNCIONES DE LOS BOTONES
 		// TextBox de Mensaje
 		myMessage.addEventListener('input', function(e) {
 			myTxtMessage = this.value;
-			/*
-			if (this.value != "") { 
-				console.log("Text: " + this.value);
-				arrayBuffer=str2ab(this.value);
-				view = stringToUint(this.value);
-				console.log(arrayBuffer);
-			}
-			*/
 		});
 		
 		// Boton Insertar Mensaje
@@ -75,58 +152,147 @@
 			
 
 			if(file != null) {
-				if (myTxtMessage != "") {
-					console.log("Longitud del MSg: " + myTxtMessage.length)
-					if (myTxtMessage.length < 256) {
-					fr.addEventListener( "load", loadEvent );
-					fr.addEventListener( "loadend", loadEndEvent );
-					
-					function loadEvent ( e ) {
-						console.info( 'Cargando... esperar un momento.' );     
-					}
-					
-					function loadEndEvent ( e ) {
-						console.info('Carga lista.');
-						var img = new Image();
-						img.src = e.target.result;
-						// Cargar imagen 
-						img.onload = function() {
-							// Dibujando imagen en Canvas (invisible)
-							myCtx.drawImage(img, 0, 0);
-							// Obteniendo los valores RGB
-							myImgArray = myCtx.getImageData(0, 0, myCanvas.height, myCanvas.width);
-							console.log(myImgArray);
-							// Leyendo y reemplazando bits para ocultar el Mensaje
-							myMsgArray = stringToUint(myTxtMessage);
-							console.log(myMsgArray);
-							readByte(myMsgArray);
-							// Dibujando imagen usando la matriz de bytes
-							mySecretCtx.putImageData( myImgArray, 0, 0 );
-							// Descargandi Imagen
-							
-							
-							
+				if (file.width > 256 || file.length > 256) {
+					alert("¡La imagen no cumple con las especificaciones de tamaño!");
+				} else {
+					if (myTxtMessage != "") {
+						console.log("Longitud del MSg: " + myTxtMessage.length)
+						if (myTxtMessage.length < 256) {
+						fr.addEventListener( "load", loadEvent );
+						fr.addEventListener( "loadend", loadEndEvent );
+						
+						function loadEvent ( e ) {
+							console.info( 'Cargando... esperar un momento.' );     
+						}
+						
+						function loadEndEvent ( e ) {
+							console.info('Carga lista.');
+							var img = new Image();
+							img.src = e.target.result;
+							// Cargar imagen 
+							img.onload = function() {
+								// Dibujando imagen en Canvas (invisible)
+								myCtx.drawImage(img, 0, 0);
+								// Obteniendo los valores RGB
+								myImgArray = myCtx.getImageData(0, 0, myCanvas.height, myCanvas.width);
+								console.log(myImgArray);
+								// Leyendo y reemplazando bits para ocultar el Mensaje
+								myMsgArray = stringToUint(myTxtMessage);
 
-							console.log('Done.');
-							
-						}	
+								for(var i=0; i < myMsgArray.length; i++) {
+								myBinMsgBox.value += (myMsgArray[i].toString(2) + " ");
+								}
+
+								console.log(myMsgArray);
+								readByte(myMsgArray);
+								// Dibujando imagen usando la matriz de bytes
+								mySecretCtx.putImageData( myImgArray, 0, 0 );
+								// Descargando Imagen
+								mySecretLink.click();
+
+								console.log('Done.');
+								
+							}	
+						}
+						fr.readAsDataURL(file);
+						} else {
+							alert("¡Texto demasiado largo!");
+							//console.log("Longitud del MSg: " + myTxtMessage.length)
+							myTxtMessage="";
+							myMsgBox.value="";
+						}
 					}
-					fr.readAsDataURL(file);
-					} else {
-						alert("¡Texto demasiado largo!");
-						//console.log("Longitud del MSg: " + myTxtMessage.length)
-						myTxtMessage="";
-						myMsgBox.value="";
-					}
-				}
-				else {
-					alert("¡Insertar texto primero!");
+					else {
+						alert("¡Insertar texto primero!");
+					}					
 				}
 			} else {
 				alert("¡Insertar imagen primero!");
 			}
 		});
 
+		// Boton extraer Mensaje
+		showMessage.addEventListener('click', function(e){
+			var file = myImg.files[0];
+			var fr = new FileReader();
+
+			if (file != null) {
+				fr.addEventListener('loadend', loadEndEvent);
+
+				function loadEndEvent(e) {
+					// Carga de imagen
+					var img = new Image();
+					img.src = e.target.result;
+					img.onload = function() {
+						// Dibujar imagen en el canvas (invisible)
+						mySecretCtx.drawImage(img, 0, 0);
+						// Objeto ArrayBuffer obtenido a partir de la Imagen
+						
+						var loadView = mySecretCtx.getImageData(0, 0, mySecretCanvas.height, mySecretCanvas.width);
+						console.log(loadView);
+						
+						var totalLength = 0;
+						var lastIndex;
+						// Recorrer todos los bits de los pixeles
+						// Obtener la longitud del mensaje secreto
+						for(var b=0, viewLength = loadView.data.length; b < viewLength; b++) {
+							if (loadView.data[ b ] == 255) {
+								totalLength += loadView.data[ b ];
+								if (loadView.data[ b + 1 ] < 255) {
+									totalLength += loadView.data[ b + 1 ];
+									lastIndex = b + 1;
+									break;
+								}
+							} else {
+								totalLength += loadView.data[ b ];
+								lastIndex = b;
+								break;
+							}
+						}
+						console.info( 'Total length :' + totalLength + ', Last Index : ' + lastIndex )
+						// Obtener la longitud del mensaje secreto
+						var secretLength = totalLength;
+						// Generar un arreglo Uint8, dividido entre cuatro ya que un caracter equivale a 8 bits
+						var newUint8Array = new Uint8Array( totalLength / 4 );
+						var j = 0;
+						// Extrayendo los bits del pixel
+						for ( var i = ( lastIndex + 1 ); i < secretLength; i = i + 4 ) {
+							// Solo se necesitan 2 bits de casa byte, los que contienen el mensaje secreto
+							// Primero, se eliminan los bits sobrantes con la mask(3) == 0000 0011
+							// Después, corrimiento a la izquierda por cada bit
+							var aShift = ( loadView.data[ i ] & 3 );
+							var bShift = ( loadView.data[ i + 1 ] & 3 ) << 2;
+							var cShift = ( loadView.data[ i + 2 ] & 3 ) << 4;
+							var dShift = ( loadView.data[ i + 3 ] & 3 ) << 6;
+							// finalmente, combinar los bits modificados para formar un byte (8 bits)
+							var result = ( ( ( aShift | bShift) | cShift ) | dShift );
+							// almacenar el byte en un arreglo Uint (sin signo)
+							newUint8Array[ j ] = result;
+							j++;
+						}
+						console.log(newUint8Array);
+						// Decodificar el arreglo Uint8 para obtener el texto representado en ASCII
+						var result = decodeUtf8( newUint8Array );
+						myBinMsgBox.value="";
+
+						for(var i=0; i< newUint8Array.length; i++) {
+							myBinMsgBox.value += (newUint8Array[i].toString(2) + " ");
+						}
+						//myBinMsgBox.value = newUint8Array;
+
+						console.log( result )
+						// Imprimir el texto en la caja de Texto
+						myMsgBox.value="";
+						myMsgBox.value=result;
+						
+					}
+				}
+				fr.readAsDataURL(file);
+			} else {
+				alert("¡Inserta una imagen!");
+			}
+
+		});
 
 		// FUNCIONES LSB
 		// ReadByte; Insertando la informacion del mensaje en la Matriz de Img
@@ -205,7 +371,6 @@
 			index++;
 		}
 
-		
 		/*REFS:
 			-https://jsfiddle.net/norlihazmeyGhazali/quo42a2n/
 			-https://stackoverflow.com/questions/6965107/converting-between-strings-and-arraybuffers
@@ -214,3 +379,8 @@
 	</script>
 	
 </body>
+<footer>
+		<a href="http://www.tubweb.com/archivo.doc">Manual Tecnico</a>
+		<a href="http://www.tubweb.com/archivo.doc">Manual para el Usuario</a>
+</footer>
+</html>
