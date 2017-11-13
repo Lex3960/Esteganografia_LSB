@@ -5,55 +5,87 @@
 	<title>Esteganografía LSB</title>
 	<meta charset="UTF-8">
 </head>
-<body background="img/fondo.png" >
+<body background="preview.jpg" >
 
-	<div class='row' ></div>
-		<div class="col s4 "  ></div>
-		<h2 >Esteganografía LSB</h2>
-		<div class="card-panel">
-			<div class="blue-text text-darken-2" id='text'>
-				<p class="center-align" >Proyecto final</p>
-				<p>
-					Alejandro Résendiz Martinez
-					<br>					 
-					Marcos Zárraga Flores 
-				</p>
-				<p>
-					Este proyecto nos muestra el algoritmo de esteganografía LSB (Least significant bit),
-					donde se lee cada pixel de la imagen y se desglosa en bits, una vez teniendo esta información,
-					se altera el ultimo bit de la secuencia de colores para poder ocultar el mensaje en la imagen y
-					que el ojo humano no pueda diferenciar a simple vista las modificaciones realizadas a la imagen original.
-				</p>		 
+	<div class="card-panel teal lighten-4"> 
+		<div class='row' >
+			<div class="col s1"> </div>
+			<div class="col s10 "> 
+				<h3 >Seguridad Informática</h3> 
+				<h4 >Esteganografía</h4> 
 			</div>
 		</div>
 	</div>
 
-	<hr/>
-	Imagen:
-	<input type="file" id="myImage" />
-	<canvas id="myCanvas" width="256" height="256" ></canvas>
-	<br>
-	<canvas id="mySecretCanvas" width="256" height="256" ></canvas>
-	<a id="mySecretDownload" style='display:none;'>Secret</a>
-	<hr/>
+	<div class='row' >
+		<div class="col s1"> </div>
+		<div class="col s10 "> 
+			<div class="card-panel teal lighten-4">
 
-	<div class='row'>
-		<div class="col s6">
-			Mensaje:  <br>
-			<textarea id="myMessage" rows="7" cols="100"> </textarea>
-			<hr/>
+				<div class="gray-text text-darken-4" id='text'>
+					<h4 class="left-align" >Algoritmo LSB</h4>
+					<p>
+						En este proyecto se prueba el algoritmo de esteganografía LSB (Least Significant Bit), también conocido como  método de Sustitución. Consiste en leer cada pixel de una imagen digital y desglosarlo en bits; una vez teniendo esta información, se modifica el ultimo bit de la secuencia de colores para poder ocultar el mensaje en la imagen. De esta manera, el ojo humano no puede diferenciar a simple vista las modificaciones realizadas a la imagen original.
+						</p>	
+					<!--hr/-->	 
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<div class="row">
-		<button id="hideMessage">Insertar</button>
-		<button id="showMessage">Extraer</button>
-		<hr/>
-	</div>
+		<div class="row">
+				<div class="col s1"> </div>
+				<div class="col s10">
 
+				<form action="#">
+		    		<div class="file-field input-field">
+				      	<div class="btn">
+				        	<span>Imagen</span>
+		    		    	<input type="file" id="myImage">
+				      	</div>
+				      	<div class="file-path-wrapper">
+			    	    	<input class="file-path validate" type="text">
+			     		</div>
+			   		</div>
+		    	</form>
 
-	Representación Binaria:	<br>
-	<textarea id="myBinMessage" rows="7" cols="100"> </textarea>
+				<canvas id="myCanvas" width="256" height="256" style='display:none;'></canvas>
+				<!--br-->
+				<canvas id="mySecretCanvas" width="256" height="256" style='display:none;'></canvas>
+				<a id="mySecretDownload" style='display:none;'>Secret</a>
+
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col s1"> </div>
+			<div class="col s10 card-panel teal lighten-4">
+				<span class="flow-text"> Mensaje:</span>
+				<br>
+					<textarea id="myMessage" rows="7" cols="100"> </textarea>
+					<!--hr/-->
+			</div>
+			</div>
+
+		<div class="row">
+			<div class="col s1"> </div>
+			<div class="col s10">
+				<button id="hideMessage" class="btn waves-effect waves-light">  Insertar   </button>
+				<button id="showMessage" class="btn waves-effect waves-light">  Extraer </button>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col s1"> </div>
+			<div class="col s10 card-panel teal lighten-4">
+				<span class="flow-text"> Representación Binaria:</span>
+				<br>
+				<textarea id="myBinMessage" rows="7" cols="100"> </textarea>
+				<hr/>
+			</div>
+		</div>
+	
+
 
 	<script>
 		// VARIABLES GLOBALES
@@ -142,7 +174,12 @@
 		// FUNCIONES DE LOS BOTONES
 		// TextBox de Mensaje
 		myMessage.addEventListener('input', function(e) {
-			myTxtMessage = this.value;
+			if (this.value.length	< 256 ) {
+				myTxtMessage = this.value;
+			} else {
+				alert("¡Mensaje demasiado largo!");
+				this.value	= "";
+			}
 		});
 		
 		// Boton Insertar Mensaje
@@ -299,7 +336,7 @@
 		function readByte( secret ) {
 			for ( var i = 0, length = secret.length; i < length; i++ ) {
     			if ( i == 0 ) {
-        			// En el prier bit se almacena la longitud del mensaje, el cual debe ser multiplo de 4
+        			// En el primer bit se almacena la longitud del mensaje, el cual debe ser multiplo de 4
         			// El codigo de un caracter contiene 8 bits, los cuales se dividen en grupos de 2
         			// Cada grupo de 2 bits reemplaza el LSB(Least significant bit) del byte del pixel
         			var secretLength = length * 4;
@@ -371,16 +408,34 @@
 			index++;
 		}
 
-		/*REFS:
-			-https://jsfiddle.net/norlihazmeyGhazali/quo42a2n/
-			-https://stackoverflow.com/questions/6965107/converting-between-strings-and-arraybuffers
-			https://jsperf.com/string-to-uint8array
-*/
+		/* REFERENCIAS DEL CODIGO
+		*	https://jsfiddle.net/norlihazmeyGhazali/quo42a2n/
+		* 	https://stackoverflow.com/questions/6965107/converting-between-strings-and-arraybuffers
+		*   https://jsperf.com/string-to-uint8array
+		*/
+
 	</script>
 	
 </body>
 <footer>
-		<a href="http://www.tubweb.com/archivo.doc">Manual Tecnico</a>
-		<a href="http://www.tubweb.com/archivo.doc">Manual para el Usuario</a>
+	<div class="card-panel teal lighten-4">
+		<div class="row valign-wrapper">
+			
+			<div class="col s4 left-align">
+					
+					<a href="ManualTecnico.docx">Manual Tecnico</a>
+					<br>
+					
+			</div>
+			<div class="col s4 left-align">
+					<p>
+						Alejandro Reséndiz Martínez - A01273960 
+						<br>
+						Marcos Zárraga Flores - A01271642
+					</p>
+			</div>
+			<div class="col s1"></div>
+		<div>
+	</div>
 </footer>
 </html>
